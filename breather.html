@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <title>Breathing App</title>
+  <style>
+    /* Глобальные стили */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: white;
+      color: black;
+      text-align: center;
+      transition: background 0.3s, color 0.3s;
+      overflow: hidden;
+      height: 100vh;
+    }
+    body.dark {
+      background: black;
+      color: white;
+    }
+    body.yellow { background: #FFEB3B; }
+    body.green { background: #4CAF50; }
+    body.red { background: #F44336; }
+    body.blue { background: #2196F3; }
+
+    /* Экраны */
+    .screen {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+      position: relative;
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    /* Текст и кнопки */
+    h1 {
+      font-size: 9vw;
+      margin-bottom: 20px;
+      max-width: 90%;
+    }
+    h2, h3 {
+      font-size: 6vw;
+      margin-bottom: 20px;
+      max-width: 90%;
+    }
+    button {
+      font-size: 5vw;
+      margin: 10px;
+      padding: 15px 30px;
+      border: 3px solid black;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 50px;
+      transition: all 0.3s;
+    }
+    body.dark button {
+      border-color: white;
+      color: white;
+    }
+    body.yellow button,
+    body.green button,
+    body.red button,
+    body.blue button {
+      border-color: black;
+      color: black;
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+
+    /* Выделение активных элементов */
+    .shape-btn.active,
+    .color-btn.active,
+    .lang-btn.active,
+    .tech-btn.active {
+      font-weight: bold;
+      transform: scale(1.05);
+    }
+
+    /* Формы для дыхания */
+    .shape {
+      width: 75vw;
+      height: 75vw;
+      max-width: 450px;
+      max-height: 450px;
+      margin: 30px auto;
+      transition: all 0.1s linear;
+      position: relative;
+    }
+    .circle {
+      border: 15px solid black;
+      border-radius: 50%;
+    }
+    .triangle {
+      width: 0;
+      height: 0;
+      border-left: 37.5vw solid transparent;
+      border-right: 37.5vw solid transparent;
+      border-bottom: 65vw solid black;
+      max-width: none;
+      background: transparent !important;
+    }
+    .diamond {
+      transform: rotate(45deg);
+      border: 15px solid black;
+      margin: 50px auto;
+    }
+    body.dark .circle,
+    body.dark .triangle,
+    body.dark .diamond {
+      border-color: white;
+    }
+    body.dark .triangle {
+      border-bottom-color: white;
+    }
+
+    /* Слайдеры */
+    .slider-container {
+      width: 80%;
+      margin: 20px auto;
+    }
+    input[type="range"] {
+      width: 100%;
+      margin: 10px 0;
+      -webkit-appearance: none;
+      height: 10px;
+      background: #ddd;
+      border-radius: 5px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: black;
+      cursor: pointer;
+    }
+    body.dark input[type="range"] {
+      background: #555;
+    }
+    body.dark input[type="range"]::-webkit-slider-thumb {
+      background: white;
+    }
+
+    /* Таймер */
+    #phases-left {
+      font-size: 8vw;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    #phase-timer {
+      font-size: 6vw;
+      margin-bottom: 10px;
+      color: #666;
+    }
+    body.dark #phase-timer {
+      color: #aaa;
+    }
+
+    /* Кнопка настроек */
+    #btn-settings {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 15vw;
+      height: 15vw;
+      max-width: 60px;
+      max-height: 60px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Модальное окно */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      padding: 20vh 0;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 2px solid black;
+      color: black;
+    }
+    body.dark .modal-content {
+      background: black;
+      border-color: white;
+      color: white;
+    }
+    body.yellow .modal-content {
+      background: #FFEB3B;
+      border-color: black;
+      color: black;
+    }
+    body.green .modal-content {
+      background: #4CAF50;
+      border-color: black;
+      color: black;
+    }
+    body.red .modal-content {
+      background: #F44336;
+      border-color: black;
+      color: black;
+    }
+    body.blue .modal-content {
+      background: #2196F3;
+      border-color: black;
+      color: black;
+    }
+
+    /* Десктопные стили */
+    @media (min-width: 768px) {
+      h1 {
+        font-size: 36px;
+      }
+      h2, h3 {
+        font-size: 24px;
+      }
+      button {
+        font-size: 18px;
+        padding: 12px 24px;
+      }
+      .shape {
+        width: 300px;
+        height: 300px;
+      }
+      .triangle {
+        border-left: 150px solid transparent;
+        border-right: 150px solid transparent;
+        border-bottom: 260px solid black;
+      }
+      .modal {
+        padding: 10% 0;
+      }
+      .modal-content {
+        width: 60%;
+        max-height: 60vh;
+      }
+      #phases-left {
+        font-size: 32px;
+      }
+      #phase-timer {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Экран приветствия -->
+  <div id="screen-welcome" class="screen active">
+    <h1 id="welcome-text">Hi, you have found a perfect moment to connect with yourself.</h1>
+    <button id="btn-technique">Coherent Breathing</button>
+    <button id="btn-start">Start</button>
+    <button id="btn-settings">⚙️</button>
+  </div>
+
+  <!-- Экран настроек -->
+  <div id="screen-settings" class="screen">
+    <h2>Settings</h2>
+    
+    <h3>Focus Shape:</h3>
+    <div>
+      <button class="shape-btn active" data-shape="circle">● Circle</button>
+      <button class="shape-btn" data-shape="triangle">▲ Triangle</button>
+      <button class="shape-btn" data-shape="diamond">◆ Diamond</button>
+    </div>
+    
+    <h3>Background:</h3>
+    <div>
+      <button class="color-btn active" data-color="white">White</button>
+      <button class="color-btn" data-color="black">Black</button>
+      <button class="color-btn" data-color="yellow">Yellow</button>
+      <button class="color-btn" data-color="green">Green</button>
+      <button class="color-btn" data-color="red">Red</button>
+      <button class="color-btn" data-color="blue">Blue</button>
+    </div>
+    
+    <h3>Language:</h3>
+    <div>
+      <button class="lang-btn active" data-lang="en">English</button>
+      <button class="lang-btn" data-lang="ru">Русский</button>
+    </div>
+    
+    <button id="btn-back" style="margin-top: 30px;">Back</button>
+  </div>
+
+  <!-- Экран практики -->
+  <div id="screen-practice" class="screen">
+    <div id="phases-left">Phases left: 0</div>
+    <div id="phase-timer">Inhale: 0s</div>
+    <div id="breathing-shape" class="shape circle"></div>
+    <button id="btn-exit">Exit</button>
+  </div>
+
+  <!-- Модальное окно выбора техники -->
+  <div id="modal-technique" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Select Technique</h2>
+      <div id="technique-list" style="margin: 20px 0;">
+        <button class="tech-btn active" data-tech="coherent">Coherent Breathing</button>
+        <button class="tech-btn" data-tech="box">Box Breathing</button>
+        <button class="tech-btn" data-tech="4-7-8">4-7-8 Breathing</button>
+        <button class="tech-btn" data-tech="1-2">1-2 Breathing</button>
+      </div>
+      
+      <div class="slider-container">
+        <h3 id="difficulty-text">Difficulty: 3</h3>
+        <input type="range" id="slider-difficulty" min="1" max="5" value="3">
+      </div>
+      
+      <div class="slider-container">
+        <h3 id="duration-text">Duration: 3</h3>
+        <input type="range" id="slider-duration" min="1" max="5" value="3">
+      </div>
+      
+      <button id="btn-confirm" style="margin-top: 20px;">Confirm</button>
+    </div>
+  </div>
+  <script>
+    window.Telegram.WebApp.ready();
+    // Локализация
+    const texts = {
+      en: {
+        welcome: "Hi, you have found a perfect moment to connect with yourself.",
+        start: "Start",
+        settings: "⚙️",
+        exit: "Exit",
+        back: "Back",
+        confirm: "Confirm",
+        techniques: {
+          coherent: "Coherent Breathing",
+          box: "Box Breathing",
+          "4-7-8": "4-7-8 Breathing",
+          "1-2": "1-2 Breathing"
+        },
+        difficulty: "Difficulty",
+        duration: "Duration",
+        shape: "Focus Shape",
+        background: "Background",
+        language: "Language",
+        inhale: "Inhale",
+        exhale: "Exhale",
+        hold: "Hold",
+        pause: "Pause",
+        phasesLeft: "Phases left"
+      },
+      ru: {
+        welcome: "Привет, ты нашёл идеальный момент, чтобы соединиться с собой.",
+        start: "Начать",
+        settings: "⚙️",
+        exit: "Выход",
+        back: "Назад",
+        confirm: "Подтвердить",
+        techniques: {
+          coherent: "Когерентное дыхание",
+          box: "Квадратное дыхание",
+          "4-7-8": "Дыхание 4-7-8",
+          "1-2": "Дыхание 1-2"
+        },
+        difficulty: "Сложность",
+        duration: "Длительность",
+        shape: "Форма объекта",
+        background: "Фон",
+        language: "Язык",
+        inhale: "Вдох",
+        exhale: "Выдох",
+        hold: "Задержка",
+        pause: "Пауза",
+        phasesLeft: "Осталось фаз"
+      }
+    };
+
+    // Техники дыхания (вдох, выдох, пауза в секундах)
+    const techniques = {
+      coherent: { inhale: 4, exhale: 6, pause: 0 },
+      box: { inhale: 4, hold: 4, exhale: 4, pause: 4 },
+      "4-7-8": { inhale: 4, hold: 7, exhale: 8, pause: 0 },
+      "1-2": { inhale: 2, exhale: 4, pause: 0 }
+    };
+
+    // Текущие настройки
+    let currentTech = "coherent";
+    let currentShape = "circle";
+    let currentColor = "white";
+    let currentLang = "en";
+    let difficulty = 3;
+    let duration = 3;
+    let isRunning = false;
+    let timerInterval;
+    let phaseInterval;
+    let phasesLeft = 0;
+    let currentPhase = "";
+    let phaseTimeLeft = 0;
+
+    // DOM элементы
+    const welcomeText = document.getElementById("welcome-text");
+    const btnTechnique = document.getElementById("btn-technique");
+    const btnStart = document.getElementById("btn-start");
+    const btnSettings = document.getElementById("btn-settings");
+    const btnBack = document.getElementById("btn-back");
+    const btnExit = document.getElementById("btn-exit");
+    const btnConfirm = document.getElementById("btn-confirm");
+    const breathingShape = document.getElementById("breathing-shape");
+    const phasesLeftEl = document.getElementById("phases-left");
+    const phaseTimer = document.getElementById("phase-timer");
+    const modalTechnique = document.getElementById("modal-technique");
+    const techList = document.getElementById("technique-list");
+    const sliderDifficulty = document.getElementById("slider-difficulty");
+    const sliderDuration = document.getElementById("slider-duration");
+    const difficultyText = document.getElementById("difficulty-text");
+    const durationText = document.getElementById("duration-text");
+
+    // Инициализация
+    function init() {
+      updateTexts();
+      setupEventListeners();
+      updateDifficultyText();
+      updateDurationText();
+    }
+
+    // Обновление текстов по языку
+    function updateTexts() {
+      const lang = texts[currentLang];
+      welcomeText.textContent = lang.welcome;
+      btnStart.textContent = lang.start;
+      btnExit.textContent = lang.exit;
+      btnBack.textContent = lang.back;
+      btnConfirm.textContent = lang.confirm;
+      btnTechnique.textContent = lang.techniques[currentTech];
+      phasesLeftEl.textContent = `${lang.phasesLeft}: ${phasesLeft}`;
+      
+      document.querySelectorAll(".shape-btn").forEach(btn => {
+        btn.textContent = btn.dataset.shape === "circle" ? "● " + lang.shape :
+                         btn.dataset.shape === "triangle" ? "▲ " + lang.shape :
+                         "◆ " + lang.shape;
+      });
+      
+      document.querySelectorAll("h3").forEach(h3 => {
+        if (h3.textContent.includes("Shape")) h3.textContent = lang.shape;
+        if (h3.textContent.includes("Background")) h3.textContent = lang.background;
+        if (h3.textContent.includes("Language")) h3.textContent = lang.language;
+      });
+
+      updateDifficultyText();
+      updateDurationText();
+
+      if (currentPhase) {
+        updatePhaseText();
+      }
+    }
+
+    // Обновление текста сложности
+    function updateDifficultyText() {
+      const lang = texts[currentLang];
+      difficultyText.textContent = `${lang.difficulty}: ${difficulty}`;
+    }
+
+    // Обновление текста длительности
+    function updateDurationText() {
+      const lang = texts[currentLang];
+      durationText.textContent = `${lang.duration}: ${duration}`;
+    }
+
+    // Настройка обработчиков событий
+    function setupEventListeners() {
+      btnStart.addEventListener("click", startPractice);
+      btnSettings.addEventListener("click", () => switchScreen("settings"));
+      btnBack.addEventListener("click", () => switchScreen("welcome"));
+      btnExit.addEventListener("click", stopPractice);
+      btnTechnique.addEventListener("click", showTechniqueModal);
+      btnConfirm.addEventListener("click", confirmTechnique);
+      
+      document.querySelectorAll(".shape-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+          document.querySelectorAll(".shape-btn").forEach(b => b.classList.remove("active"));
+          this.classList.add("active");
+          currentShape = this.dataset.shape;
+          updateShape();
+        });
+      });
+      
+      document.querySelectorAll(".color-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+          document.querySelectorAll(".color-btn").forEach(b => b.classList.remove("active"));
+          this.classList.add("active");
+          currentColor = this.dataset.color;
+          updateBackground();
+        });
+      });
+      
+      document.querySelectorAll(".lang-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+          document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("active"));
+          this.classList.add("active");
+          currentLang = this.dataset.lang;
+          updateTexts();
+        });
+      });
+      
+      sliderDifficulty.addEventListener("input", function() {
+        difficulty = parseInt(this.value);
+        updateDifficultyText();
+      });
+      
+      sliderDuration.addEventListener("input", function() {
+        duration = parseInt(this.value);
+        updateDurationText();
+      });
+    }
+
+    // Переключение экранов
+    function switchScreen(screen) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.querySelector(".modal").style.display = "none";
+      
+      if (screen === "welcome") {
+        document.getElementById("screen-welcome").classList.add("active");
+      } else if (screen === "settings") {
+        document.getElementById("screen-settings").classList.add("active");
+      } else if (screen === "practice") {
+        document.getElementById("screen-practice").classList.add("active");
+      } else if (screen === "technique-modal") {
+        modalTechnique.style.display = "flex";
+      }
+    }
+
+    // Показать модальное окно выбора техники
+    function showTechniqueModal() {
+      modalTechnique.style.display = "flex";
+    }
+
+    // Подтверждение выбора техники
+    function confirmTechnique() {
+      const selectedTech = document.querySelector(".tech-btn.active").dataset.tech;
+      currentTech = selectedTech;
+      btnTechnique.textContent = texts[currentLang].techniques[currentTech];
+      modalTechnique.style.display = "none";
+    }
+
+    // Обновление формы
+    function updateShape() {
+      breathingShape.className = "shape";
+      breathingShape.classList.add(currentShape);
+    }
+
+    // Обновление фона
+    function updateBackground() {
+      // Устанавливаем класс для body
+      document.body.className = currentColor;
+      if (currentColor === "black") {
+        document.body.classList.add("dark");
+      }
+      
+      // Обновляем стили модального окна и слайдеров
+      const modalContent = document.querySelector(".modal-content");
+      const sliders = document.querySelectorAll("input[type='range']");
+      
+      if (currentColor === "black") {
+        modalContent.style.background = "black";
+        modalContent.style.color = "white";
+        modalContent.style.borderColor = "white";
+        sliders.forEach(slider => {
+          slider.style.background = "#555";
+        });
+      } else {
+        // Для всех цветных фонов
+        modalContent.style.background = currentColor === "white" ? "white" : 
+                                      currentColor === "yellow" ? "#FFEB3B" :
+                                      currentColor === "green" ? "#4CAF50" :
+                                      currentColor === "red" ? "#F44336" : "#2196F3";
+        modalContent.style.color = "black";
+        modalContent.style.borderColor = "black";
+        sliders.forEach(slider => {
+          slider.style.background = "#ddd";
+        });
+      }
+    }
+
+    // Обновление текста текущей фазы
+    function updatePhaseText() {
+      const lang = texts[currentLang];
+      phaseTimer.textContent = `${lang[currentPhase]}: ${phaseTimeLeft}s`;
+      phasesLeftEl.textContent = `${lang.phasesLeft}: ${phasesLeft}`;
+    }
+
+    // Запуск практики
+    function startPractice() {
+      isRunning = true;
+      phasesLeft = duration;
+      switchScreen("practice");
+      updateShape();
+      startBreathingCycle();
+    }
+
+    // Остановка практики
+    function stopPractice() {
+      isRunning = false;
+      clearInterval(timerInterval);
+      clearInterval(phaseInterval);
+      switchScreen("welcome");
+    }
+
+    // Цикл дыхания
+    function startBreathingCycle() {
+      if (!isRunning) return;
+      
+      const tech = techniques[currentTech];
+      const inhaleDuration = (tech.inhale * difficulty) * 1000;
+      const exhaleDuration = (tech.exhale * difficulty) * 1000;
+      const holdDuration = (tech.hold || 0) * difficulty * 1000;
+      const pauseDuration = (tech.pause || 0) * difficulty * 1000;
+      
+      function animateShape(startScale, endScale, duration, onComplete) {
+        const startTime = Date.now();
+        const update = () => {
+          if (!isRunning) return;
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const currentScale = startScale + (endScale - startScale) * progress;
+          breathingShape.style.transform = `scale(${currentScale})`;
+          
+          phaseTimeLeft = Math.ceil((duration - elapsed) / 1000);
+          updatePhaseText();
+          
+          if (progress < 1) {
+            requestAnimationFrame(update);
+          } else if (onComplete) {
+            onComplete();
+          }
+        };
+        requestAnimationFrame(update);
+      }
+      
+      // Вдох
+      currentPhase = "inhale";
+      phaseTimeLeft = tech.inhale * difficulty;
+      updatePhaseText();
+      playSound();
+      animateShape(0.3, 1, inhaleDuration, () => {
+        if (!isRunning) return;
+        
+        // Задержка после вдоха
+        if (holdDuration > 0) {
+          currentPhase = "hold";
+          phaseTimeLeft = tech.hold * difficulty;
+          updatePhaseText();
+          playSound();
+          setTimeout(() => {
+            if (!isRunning) return;
+            
+            // Выдох
+            currentPhase = "exhale";
+            phaseTimeLeft = tech.exhale * difficulty;
+            updatePhaseText();
+            playSound();
+            animateShape(1, 0.3, exhaleDuration, () => {
+              if (!isRunning) return;
+              
+              // Пауза после выдоха
+              if (pauseDuration > 0) {
+                currentPhase = "pause";
+                phaseTimeLeft = tech.pause * difficulty;
+                updatePhaseText();
+                playSound();
+                setTimeout(() => {
+                  phasesLeft--;
+                  updatePhaseText();
+                  if (phasesLeft > 0) {
+                    startBreathingCycle();
+                  } else {
+                    stopPractice();
+                  }
+                }, pauseDuration);
+              } else {
+                phasesLeft--;
+                updatePhaseText();
+                if (phasesLeft > 0) {
+                  startBreathingCycle();
+                } else {
+                  stopPractice();
+                }
+              }
+            });
+          }, holdDuration);
+        } else {
+          // Выдох без задержки
+          currentPhase = "exhale";
+          phaseTimeLeft = tech.exhale * difficulty;
+          updatePhaseText();
+          playSound();
+          animateShape(1, 0.3, exhaleDuration, () => {
+            if (!isRunning) return;
+            
+            // Пауза после выдоха
+            if (pauseDuration > 0) {
+              currentPhase = "pause";
+              phaseTimeLeft = tech.pause * difficulty;
+              updatePhaseText();
+              playSound();
+              setTimeout(() => {
+                phasesLeft--;
+                updatePhaseText();
+                if (phasesLeft > 0) {
+                  startBreathingCycle();
+                } else {
+                  stopPractice();
+                }
+              }, pauseDuration);
+            } else {
+              phasesLeft--;
+              updatePhaseText();
+              if (phasesLeft > 0) {
+                startBreathingCycle();
+              } else {
+                stopPractice();
+              }
+            }
+          });
+        }
+      });
+    }
+
+    // Воспроизведение звука
+    function playSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.type = "sine";
+        oscillator.frequency.value = 440;
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.3);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+        
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 1.5);
+      } catch (e) {
+        console.log("Audio error:", e);
+      }
+    }
+
+    // Инициализация при загрузке
+    window.onload = init;
+  </script>
+</body>
+</html>
